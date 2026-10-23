@@ -1,4 +1,4 @@
-import { najdiZakladnu } from '../data/zakladnePotraviny';
+import { DOCHUCOVADLA, najdiZakladnu } from '../data/zakladnePotraviny';
 import { Potravina, Recept, Vyziva } from '../types';
 
 const nula = (): Vyziva => ({ kcal: 0, bielkoviny: 0, sacharidy: 0, tuky: 0 });
@@ -33,9 +33,12 @@ export function vyzivaReceptu(recept: Recept, spajza: Potravina[]) {
   return { spolu, naPorciu };
 }
 
-/** Ktoré suroviny receptu v špajzi chýbajú. */
+/** Ktoré suroviny receptu v špajzi chýbajú (soľ, korenie, olej a vodu nepočítame). */
 export function chybajuceSuroviny(recept: Recept, spajza: Potravina[]) {
+  const rovnake = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
   return recept.suroviny.filter(
-    (s) => !spajza.some((p) => p.nazov.toLowerCase() === s.nazov.toLowerCase()),
+    (s) =>
+      !DOCHUCOVADLA.some((d) => rovnake(d, s.nazov)) &&
+      !spajza.some((p) => rovnake(p.nazov, s.nazov)),
   );
 }
