@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native
 import { jeServerNastaveny, vygenerujRecepty } from '@/api/recepty';
 import { UKAZKOVE_RECEPTY } from '@/data/ukazkoveRecepty';
 import { chybajuceSuroviny, vyzivaReceptu } from '@/lib/vyziva';
+import { hodnotZdravie, hviezdy } from '@/lib/zdravie';
 import { useRecepty } from '@/store/recepty';
 import { useSpajza } from '@/store/spajza';
 import { farby } from '@/ui/farby';
@@ -36,8 +37,13 @@ export default function Recepty() {
 
   // Najprv recepty, na ktoré mám najviac surovín.
   const recepty = zdroj
-    .map((r) => ({ recept: r, chyba: chybajuceSuroviny(r, spajza), vyziva: vyzivaReceptu(r, spajza) }))
-    .sort((a, b) => a.chyba.length - b.chyba.length);
+    .map((r) => ({
+      recept: r,
+      chyba: chybajuceSuroviny(r, spajza),
+      vyziva: vyzivaReceptu(r, spajza),
+      zdravie: hodnotZdravie(r, spajza),
+    }))
+    .sort((a, b) => a.chyba.length - b.chyba.length || b.zdravie.body - a.zdravie.body);
 
   return (
     <View style={styly.obrazovka}>
@@ -76,6 +82,7 @@ export default function Recepty() {
           <Link href={{ pathname: '/recept/[id]', params: { id: item.recept.id } }} asChild>
             <Pressable style={styly.karta}>
               <Text style={styly.nadpis}>{item.recept.nazov}</Text>
+              <Text style={{ color: farby.zelena }}>Zdravie: {hviezdy(item.zdravie.body)}</Text>
               <Text style={styly.popis}>
                 {Math.round(item.vyziva.naPorciu.kcal)} kcal na porciu · {item.recept.porcie}{' '}
                 {item.recept.porcie === 1 ? 'porcia' : 'porcie'} · {item.recept.casMinut} min
