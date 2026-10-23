@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { UKAZKOVE_RECEPTY } from '@/data/ukazkoveRecepty';
 import { vyzivaReceptu } from '@/lib/vyziva';
+import { najdiRecept, useRecepty } from '@/store/recepty';
 import { useSpajza } from '@/store/spajza';
 import { farby } from '@/ui/farby';
 import { styly } from '@/ui/styly';
@@ -23,7 +24,8 @@ function Riadok({ nazov, v }: { nazov: string; v: Vyziva }) {
 export default function DetailReceptu() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const spajza = useSpajza((s) => s.potraviny);
-  const recept = UKAZKOVE_RECEPTY.find((r) => r.id === id);
+  const aiRecepty = useRecepty((s) => s.recepty);
+  const recept = najdiRecept(id, aiRecepty, UKAZKOVE_RECEPTY);
   if (!recept) return <Text style={styly.text}>Recept sa nenašiel.</Text>;
 
   const { spolu, naPorciu } = vyzivaReceptu(recept, spajza);

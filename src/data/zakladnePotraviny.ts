@@ -25,7 +25,13 @@ export const ZAKLADNE: { nazov: string; vyziva: Vyziva }[] = [
   { nazov: 'Syr eidam', vyziva: { kcal: 330, bielkoviny: 26, sacharidy: 0, tuky: 25 } },
   { nazov: 'Olivový olej', vyziva: { kcal: 884, bielkoviny: 0, sacharidy: 0, tuky: 100 } },
   { nazov: 'Celozrnný chlieb', vyziva: { kcal: 247, bielkoviny: 13, sacharidy: 41, tuky: 3.4 } },
+  { nazov: 'Soľ', vyziva: { kcal: 0, bielkoviny: 0, sacharidy: 0, tuky: 0 } },
+  { nazov: 'Korenie', vyziva: { kcal: 0, bielkoviny: 0, sacharidy: 0, tuky: 0 } },
+  { nazov: 'Voda', vyziva: { kcal: 0, bielkoviny: 0, sacharidy: 0, tuky: 0 } },
 ];
+
+/** Suroviny, ktoré má doma takmer každý. Recept ich smie použiť, aj keď nie sú v špajzi. */
+export const DOCHUCOVADLA = ['Soľ', 'Korenie', 'Olivový olej', 'Voda'];
 
 export function najdiZakladnu(nazov: string) {
   return ZAKLADNE.find((z) => z.nazov.toLowerCase() === nazov.toLowerCase());
