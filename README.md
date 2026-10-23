@@ -32,12 +32,14 @@ src/data/                  základné potraviny a ukážkové recepty
 
 ## Recepty cez AI (server)
 
-Recepty generuje Claude cez malý server: Supabase Edge Function v `supabase/functions/recepty/index.ts`.
-API kľúč pre Claude je uložený iba na serveri, appka posiela len zoznam potravín.
+Recepty generuje bezplatná AI Google Gemini (model `gemini-2.5-flash`) cez malý server:
+Supabase Edge Function v `supabase/functions/recepty/index.ts`. Všetko beží na bezplatných plánoch,
+platobná karta netreba. API kľúč je uložený iba na serveri, appka posiela len zoznam potravín.
 
 Server beží v Supabase projekte **FitSpajza** a appka ho nájde podľa súboru `.env`.
-Jediné, čo treba nastaviť ručne, je tajomstvo `ANTHROPIC_API_KEY` v Supabase
-(Edge Functions → Secrets). Kľúč získaš na [platform.claude.com](https://platform.claude.com).
+Jediné, čo treba nastaviť ručne, je tajomstvo `GEMINI_API_KEY` v Supabase
+(Edge Functions → Secrets). Bezplatný kľúč bez karty získaš v [Google AI Studio](https://aistudio.google.com/apikey).
+Bezplatný plán má limit asi 10 požiadaviek za minútu a 500 za deň, na testovanie a maturitu to stačí.
 
 Novú verziu funkcie nasadíš príkazom `npx supabase functions deploy recepty --project-ref hlzmbkuiiuveawsqzasg`.
 
