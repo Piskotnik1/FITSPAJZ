@@ -35,10 +35,11 @@ src/data/                  základné potraviny a ukážkové recepty
 Recepty generuje Claude cez malý server: Supabase Edge Function v `supabase/functions/recepty/index.ts`.
 API kľúč pre Claude je uložený iba na serveri, appka posiela len zoznam potravín.
 
-1. Vytvor projekt na [supabase.com](https://supabase.com) (zadarmo).
-2. V Supabase nastav tajomstvo `ANTHROPIC_API_KEY` (Edge Functions → Secrets). Kľúč získaš na [platform.claude.com](https://platform.claude.com).
-3. Nasaď funkciu: `npx supabase functions deploy recepty --project-ref <id-projektu>`.
-4. Skopíruj `.env.example` ako `.env.local` a doplň adresu a verejný (anon) kľúč projektu.
+Server beží v Supabase projekte **FitSpajza** a appka ho nájde podľa súboru `.env`.
+Jediné, čo treba nastaviť ručne, je tajomstvo `ANTHROPIC_API_KEY` v Supabase
+(Edge Functions → Secrets). Kľúč získaš na [platform.claude.com](https://platform.claude.com).
+
+Novú verziu funkcie nasadíš príkazom `npx supabase functions deploy recepty --project-ref hlzmbkuiiuveawsqzasg`.
 
 Kalórie receptu AI nepočíta: appka ich vypočíta sama z nutričných hodnôt na 100 g (`src/lib/vyziva.ts`).
 Bez nastaveného servera appka zobrazuje ukážkové recepty.
