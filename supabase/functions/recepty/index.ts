@@ -1,8 +1,10 @@
-// Supabase Edge Function (Deno): vygeneruje zdravé recepty zo surovín v špajzi pomocou Claude.
-// API kľúč je uložený ako tajomstvo na serveri (ANTHROPIC_API_KEY), nikdy nie v appke.
-import Anthropic from 'npm:@anthropic-ai/sdk@^1.1.0';
-import { betaZodOutputFormat } from 'npm:@anthropic-ai/sdk@^1.1.0/helpers/beta/zod';
+// Supabase Edge Function (Deno): vygeneruje zdravé recepty zo surovín v špajzi pomocou
+// bezplatnej AI Google Gemini. API kľúč je uložený ako tajomstvo na serveri (GEMINI_API_KEY),
+// nikdy nie v appke. Kľúč zadarmo, bez platobnej karty: https://aistudio.google.com/apikey
 import { z } from 'npm:zod@^4';
+
+const GEMINI_KLUC = Deno.env.get('GEMINI_API_KEY');
+const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
 
 /** Suroviny, ktoré má doma takmer každý, a preto ich recept smie použiť navyše. */
 const ZAKLADNE_DOCHUCOVADLA = ['Soľ', 'Korenie', 'Olivový olej', 'Voda'];
@@ -28,6 +30,35 @@ const Odpoved = z.object({
   ),
 });
 
+/** Rovnaká štruktúra ako Odpoved, v tvare, ktorý Gemini používa na štruktúrovaný výstup. */
+const SCHEMA_ODPOVEDE = {
+  type: 'OBJECT',
+  properties: {
+    recepty: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          nazov: { type: 'STRING' },
+          porcie: { type: 'INTEGER' },
+          casMinut: { type: 'INTEGER' },
+          suroviny: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: { nazov: { type: 'STRING' }, gramy: { type: 'NUMBER' } },
+              required: ['nazov', 'gramy'],
+            },
+          },
+          postup: { type: 'ARRAY', items: { type: 'STRING' } },
+        },
+        required: ['nazov', 'porcie', 'casMinut', 'suroviny', 'postup'],
+      },
+    },
+  },
+  required: ['recepty'],
+};
+
 const SYSTEM = `Si kuchár a výživový poradca. Navrhuješ zdravé recepty v slovenčine z potravín, ktoré má používateľ doma.
 
 Pravidlá:
@@ -52,7 +83,30 @@ function json(data: unknown, status = 200) {
   });
 }
 
-const client = new Anthropic(); // číta ANTHROPIC_API_KEY z tajomstiev servera
+/** Pošle požiadavku do Gemini a vráti skontrolovanú odpoveď, alebo null. */
+async function zavolajGemini(text: string) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KLUC! },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM }] },
+        contents: [{ role: 'user', parts: [{ text }] }],
+        generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA_ODPOVEDE },
+      }),
+    },
+  );
+  if (!res.ok) {
+    console.error('Gemini', res.status, await res.text());
+    return null;
+  }
+  const data = await res.json();
+  const vystup = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('');
+  if (!vystup) return null;
+  const overene = Odpoved.safeParse(JSON.parse(vystup));
+  return overene.success ? overene.data : null;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
@@ -68,28 +122,18 @@ Deno.serve(async (req) => {
     `${porcie === 1 ? 'porciu' : 'porcie'}.` +
     (alergeny.length ? `\nMám alergiu na: ${alergeny.join(', ')}.` : '');
 
-  try {
-    const odpoved = await client.beta.messages.parse({
-      model: 'claude-opus-5-5',
-      max_tokens: 16000,
-      output_config: { effort: 'medium', format: betaZodOutputFormat(Odpoved) },
-      // Ak by model požiadavku odmietol, server ju skúsi s iným modelom.
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      system: SYSTEM,
-      messages: [{ role: 'user', content: text }],
-    });
+  if (!GEMINI_KLUC) return json({ chyba: 'Na serveri chýba GEMINI_API_KEY' }, 500);
 
-    if (odpoved.stop_reason === 'refusal' || !odpoved.parsed_output) {
-      return json({ chyba: 'Recepty sa nepodarilo vygenerovať' }, 502);
-    }
+  try {
+    const odpoved = await zavolajGemini(text);
+    if (!odpoved) return json({ chyba: 'Recepty sa nepodarilo vygenerovať, skús to znova' }, 502);
 
     // Kontrola výstupu: povolené sú len suroviny zo špajze a základné dochucovadlá,
     // gramáž najviac toľko, koľko je doma.
     const doma = new Map(potraviny.map((p) => [p.nazov.toLowerCase(), p]));
     const dochucovadla = new Set(ZAKLADNE_DOCHUCOVADLA.map((n) => n.toLowerCase()));
 
-    const recepty = odpoved.parsed_output.recepty
+    const recepty = odpoved.recepty
       .map((r, i) => ({
         ...r,
         id: `ai-${Date.now()}-${i}`,
